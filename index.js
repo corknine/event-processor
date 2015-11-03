@@ -6,9 +6,10 @@ var through2 = require('through2');
 var pipe = require('multipipe');
 var WaitGroup = require('waitgroup');
 var split = require('split');
-var moment = require('moment');
-var url = require('url');
-var revenue = require('./lib/revenue');
+var handlers = {
+  track: require('./lib/track'),
+  identify: require('./lib/identify')
+};
 
 exports.handler = function(s3Event, context) {
   var bucket = s3Event.Records[0].s3.bucket.name;
@@ -45,6 +46,7 @@ exports.handler = function(s3Event, context) {
     context.succeed();
    });
 
+
    /**
    * The event handler
    *
@@ -52,45 +54,8 @@ exports.handler = function(s3Event, context) {
    *
    * @param {Object} event
    */
-
   function handleEvent(event) {
-    if (event.type !== 'track') return;
-
-    var time = moment(event.timestamp).format("YYYY-MM-DD HH:MM:SS");
-    var properties = event.properties;
-    var referrer = event.properties.referrer;
-    var landing = event.properties.url;
-
-    var row = [
-      event.id,
-      event.event, 
-      event.context.ip,
-      event.user_id,
-      event.cookie_id,
-      (event.user_id || event.cookie_id),
-      event.project_id,
-      time,
-      referrer,
-      url.parse(referrer).host,
-      landing,
-      url.parse(landing).path,
-      revenue.parse(properties.revenue)
-    ].join('|') + "\n";
-
-    firehosePut('events-stage-2-sandbox', row);
-
-    var query = url.parse(properties.url, true).query;
-    var rows = Object.keys(query).map(function(key) {
-      return [
-        event.id,
-        key,
-        query[key],
-        time,
-        event.project_id
-      ].join('|');
-    }).join("\n");
-
-    firehosePut('params-stage-2-sandbox', rows);
+    handlers[event.type].call(event, firehosePut);
   }
 
   function firehosePut(stream, data) {
@@ -115,11 +80,12 @@ exports.handler = function(s3Event, context) {
   // take lines emitted from `split` and parse them
   function parse(str) {
     if(str === '') return null;
-    var array = str.trim().split("|");
-    var event = JSON.parse(array[0]);
-    event.type = array[1];
-    event.id = array[2];
-    return event;
+    var array = str.trim().split("\t");
+    var data = JSON.parse(array[2]);
+    data.id = array[0];
+    data.type = array[1];
+    data.serverIp = array[3];
+    return data;
   }
 
   // handle stream errors (just bail, for now :p)
