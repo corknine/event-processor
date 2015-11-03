@@ -6,7 +6,7 @@ var through2 = require('through2');
 var pipe = require('multipipe');
 var WaitGroup = require('waitgroup');
 var split = require('split');
-var handlers = {
+var parsers = {
   track: require('./lib/track'),
   identify: require('./lib/identify')
 };
@@ -55,7 +55,9 @@ exports.handler = function(s3Event, context) {
    * @param {Object} event
    */
   function handleEvent(event) {
-    handlers[event.type].call(event, firehosePut);
+    parsers[event.type].call(event).forEach(function(parsed) {
+      firehosePut(parsed.stream, parsed.data);
+    });
   }
 
   function firehosePut(stream, data) {
@@ -82,7 +84,7 @@ exports.handler = function(s3Event, context) {
     if(str === '') return null;
     var array = str.trim().split("\t");
     var data = JSON.parse(array[2]);
-    data.id = array[0];
+    data.uuid = array[0];
     data.type = array[1];
     data.serverIp = array[3];
     return data;

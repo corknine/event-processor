@@ -93,7 +93,11 @@ describe('identify event', function(){
     var s3ObjectData = {
       project_id: 2,
       user_id: null,
-      cookie_id: "12345"
+      cookie_id: "12345",
+      traits: {
+        name: "Sam",
+        email: "sam@reh.com"
+      }
     };
 
     var line = [
