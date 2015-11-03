@@ -8,7 +8,8 @@ var WaitGroup = require('waitgroup');
 var split = require('split');
 var parsers = {
   track: require('./lib/track'),
-  identify: require('./lib/identify')
+  identify: require('./lib/identify'),
+  alias: require('./lib/alias')
 };
 
 exports.handler = function(s3Event, context) {

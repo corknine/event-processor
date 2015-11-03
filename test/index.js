@@ -13,7 +13,7 @@ describe('track event', function(){
     var firehoseSpy = sinon.spy();
 
     // Some data
-    var s3ObjectData = {
+    var body = {
       project_id: 2,
       event: "Viewed a Page",
       context: {
@@ -33,7 +33,7 @@ describe('track event', function(){
     var line = JSON.stringify({
       uuid: "1",
       type: "track",
-      body: JSON.stringify(s3ObjectData),
+      body: JSON.stringify(body),
       timestamp: (new Date()).toISOString(),
       ip: "10.0.0.1"
     }) + "\n"
@@ -43,28 +43,28 @@ describe('track event', function(){
 
     var eventLine = [
       "1",
-      s3ObjectData.project_id,
-      s3ObjectData.user_id,
-      s3ObjectData.cookie_id,
-      (s3ObjectData.user_id || s3ObjectData.cookie_id),
-      s3ObjectData.event, 
-      s3ObjectData.context.ip,
-      s3ObjectData.properties.referrer,
-      url.parse(s3ObjectData.properties.referrer).host,
-      s3ObjectData.properties.url,
-      url.parse(s3ObjectData.properties.url).path,
-      parseInt(s3ObjectData.properties.revenue) * 100,
-      moment(s3ObjectData.timestamp).format("YYYY-MM-DD HH:MM:SS")
+      body.project_id,
+      body.user_id,
+      body.cookie_id,
+      (body.user_id || body.cookie_id),
+      body.event, 
+      body.context.ip,
+      body.properties.referrer,
+      url.parse(body.properties.referrer).host,
+      body.properties.url,
+      url.parse(body.properties.url).path,
+      parseInt(body.properties.revenue) * 100,
+      moment(body.timestamp).format("YYYY-MM-DD HH:MM:SS")
     ].join("\t") + "\n";
 
-    var query = url.parse(s3ObjectData.properties.url, true).query;
+    var query = url.parse(body.properties.url, true).query;
     var paramLines = Object.keys(query).map(function(key) {
       return [
         "1",
-        s3ObjectData.project_id,
+        body.project_id,
         key,
         query[key],
-        moment(s3ObjectData.timestamp).format("YYYY-MM-DD HH:MM:SS")
+        moment(body.timestamp).format("YYYY-MM-DD HH:MM:SS")
       ].join("\t");
     }).join("\n");
 
@@ -93,7 +93,7 @@ describe('identify event', function(){
     var serverTime = (new Date()).toISOString();
 
     // Some data
-    var s3ObjectData = {
+    var body = {
       project_id: 2,
       user_id: null,
       cookie_id: "12345",
@@ -106,7 +106,70 @@ describe('identify event', function(){
     var line = JSON.stringify({
       uuid: "1",
       type: "identify",
-      body: JSON.stringify(s3ObjectData),
+      body: JSON.stringify(body),
+      timestamp: (new Date()).toISOString()
+    }) + "\n"
+    stubS3(line)
+
+    var firehoseSpy = sinon.spy();
+    stubFirehoseWithSpy(firehoseSpy);
+
+    var identifyLine = [
+      "1",
+      body.project_id,
+      body.user_id,
+      body.cookie_id,
+      (body.user_id || body.cookie_id),
+      moment(serverTime).format("YYYY-MM-DD HH:MM:SS")
+    ].join("\t") + "\n";
+
+    var traitLines = Object.keys(body.traits).map(function(key) {
+      var value = body.traits[key];
+
+      return [
+        "1",
+        body.project_id,
+        (body.user_id || body.cookie_id),
+        key,
+        value,
+        moment(body.timestamp).format("YYYY-MM-DD HH:MM:SS")
+      ].join("\t");
+    }).join("\n");
+
+    var testContext = {
+      succeed: function() {
+        sinon.assert.calledWith(firehoseSpy, {
+          DeliveryStreamName: "identifies-sandbox",
+          Record: { Data: identifyLine }
+        });
+        sinon.assert.calledWith(firehoseSpy, {
+          DeliveryStreamName: "traits-sandbox",
+          Record: { Data: traitLines }
+        });
+        done();
+      },
+      fail: done
+    };
+
+    lambda.handler(testEvent(), testContext);
+  })
+})
+
+describe('alias event', function(){
+  it('calls firehose with the data', function(done){
+    var serverTime = (new Date()).toISOString();
+
+    // Some data
+    var body = {
+      project_id: 2,
+      user_id: null,
+      cookie_id: "12345"
+    };
+
+    var line = JSON.stringify({
+      uuid: "1",
+      type: "alias",
+      body: JSON.stringify(body),
       timestamp: (new Date()).toISOString()
     }) + "\n"
     stubS3(line)
@@ -116,17 +179,17 @@ describe('identify event', function(){
 
     var eventLine = [
       "1",
-      s3ObjectData.project_id,
-      s3ObjectData.user_id,
-      s3ObjectData.cookie_id,
-      (s3ObjectData.user_id || s3ObjectData.cookie_id),
+      body.project_id,
+      body.user_id,
+      body.cookie_id,
+      (body.user_id || body.cookie_id),
       moment(serverTime).format("YYYY-MM-DD HH:MM:SS")
     ].join("\t") + "\n";
 
     var testContext = {
       succeed: function() {
         sinon.assert.calledWith(firehoseSpy, {
-          DeliveryStreamName: "identifies-sandbox",
+          DeliveryStreamName: "alias-sandbox",
           Record: { Data: eventLine }
         });
         done();
@@ -137,6 +200,7 @@ describe('identify event', function(){
     lambda.handler(testEvent(), testContext);
   })
 })
+
 
 function stubS3(data) {
   // The fake stream
