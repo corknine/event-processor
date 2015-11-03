@@ -30,12 +30,13 @@ describe('track event', function(){
       timestamp: (new Date()).toISOString()
     };
 
-    var line = [
-      "1",
-      "track",
-      JSON.stringify(s3ObjectData),
-      "10.0.0.1"
-    ].join("\t") + "\n"
+    var line = JSON.stringify({
+      uuid: "1",
+      type: "track",
+      body: JSON.stringify(s3ObjectData),
+      timestamp: (new Date()).toISOString(),
+      ip: "10.0.0.1"
+    }) + "\n"
 
     stubS3(line)
     stubFirehoseWithSpy(firehoseSpy);
@@ -60,22 +61,22 @@ describe('track event', function(){
     var paramLines = Object.keys(query).map(function(key) {
       return [
         "1",
+        s3ObjectData.project_id,
         key,
         query[key],
-        moment(s3ObjectData.timestamp).format("YYYY-MM-DD HH:MM:SS"),
-        s3ObjectData.project_id
+        moment(s3ObjectData.timestamp).format("YYYY-MM-DD HH:MM:SS")
       ].join("\t");
     }).join("\n");
 
     var testContext = {
       succeed: function() {
         sinon.assert.calledWith(firehoseSpy, {
-          DeliveryStreamName: "events-stage-2-sandbox",
+          DeliveryStreamName: "events-sandbox",
           Record: { Data: eventLine }
         });
 
         sinon.assert.calledWith(firehoseSpy, {
-          DeliveryStreamName: "params-stage-2-sandbox",
+          DeliveryStreamName: "params-sandbox",
           Record: { Data: paramLines }
         });
         done();
@@ -89,6 +90,8 @@ describe('track event', function(){
 
 describe('identify event', function(){
   it('calls firehose with the data', function(done){
+    var serverTime = (new Date()).toISOString();
+
     // Some data
     var s3ObjectData = {
       project_id: 2,
@@ -100,11 +103,12 @@ describe('identify event', function(){
       }
     };
 
-    var line = [
-      "1",
-      "identify",
-      JSON.stringify(s3ObjectData)
-    ].join("\t") + "\n"
+    var line = JSON.stringify({
+      uuid: "1",
+      type: "identify",
+      body: JSON.stringify(s3ObjectData),
+      timestamp: (new Date()).toISOString()
+    }) + "\n"
     stubS3(line)
 
     var firehoseSpy = sinon.spy();
@@ -115,13 +119,14 @@ describe('identify event', function(){
       s3ObjectData.project_id,
       s3ObjectData.user_id,
       s3ObjectData.cookie_id,
-      (s3ObjectData.user_id || s3ObjectData.cookie_id)
+      (s3ObjectData.user_id || s3ObjectData.cookie_id),
+      moment(serverTime).format("YYYY-MM-DD HH:MM:SS")
     ].join("\t") + "\n";
 
     var testContext = {
       succeed: function() {
         sinon.assert.calledWith(firehoseSpy, {
-          DeliveryStreamName: "identifies-stage-2-sandbox",
+          DeliveryStreamName: "identifies-sandbox",
           Record: { Data: eventLine }
         });
         done();

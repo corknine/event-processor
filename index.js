@@ -82,11 +82,12 @@ exports.handler = function(s3Event, context) {
   // take lines emitted from `split` and parse them
   function parse(str) {
     if(str === '') return null;
-    var array = str.trim().split("\t");
-    var data = JSON.parse(array[2]);
-    data.uuid = array[0];
-    data.type = array[1];
-    data.serverIp = array[3];
+    var parsed = JSON.parse(str.trim());
+    var data = JSON.parse(parsed.body);
+    data.uuid = parsed.uuid;
+    data.type = parsed.type;
+    data.serverTime = parsed.timestamp;
+    data.serverIp = parsed.ip;
     return data;
   }
 
