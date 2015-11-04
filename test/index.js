@@ -129,6 +129,8 @@ describe('identify event', function(){
       return [
         "1",
         body.project_id,
+        body.user_id,
+        body.cookie_id,
         (body.user_id || body.cookie_id),
         key,
         value,
