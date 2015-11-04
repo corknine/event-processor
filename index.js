@@ -56,15 +56,14 @@ exports.handler = function(s3Event, context) {
    * @param {Object} event
    */
   function handleEvent(event) {
-    parsers[event.type].call(event).forEach(function(parsed) {
-      firehosePut(parsed.stream, parsed.data);
-    });
+    var rows = parsers[event.type].call(event);
+    firehosePut(rows);
   }
 
-  function firehosePut(stream, data) {
+  function firehosePut(data) {
     wg.add();
     firehose.putRecord({
-      DeliveryStreamName: stream,
+      DeliveryStreamName: 'tracking-2-development',
       Record: { Data: data }
     }, function(err, data) {
       // TODO: do something better if there's an error

@@ -41,43 +41,54 @@ describe('track event', function(){
     stubS3(line)
     stubFirehoseWithSpy(firehoseSpy);
 
-    var eventLine = [
-      "1",
-      body.project_id,
-      body.user_id,
-      body.cookie_id,
-      (body.user_id || body.cookie_id),
-      body.event, 
-      body.context.ip,
-      body.properties.referrer,
-      url.parse(body.properties.referrer).host,
-      body.properties.url,
-      url.parse(body.properties.url).path,
-      parseInt(body.properties.revenue) * 100,
-      moment(body.timestamp).format("YYYY-MM-DD HH:MM:SS")
-    ].join("\t") + "\n";
+    var timestamp = moment(body.timestamp || body.serverTime).format("YYYY-MM-DD HH:MM:SS");
+    var properties = body.properties;
+    var referring_url = body.properties.referrer;
+    var page_url = body.properties.url;
 
-    var query = url.parse(body.properties.url, true).query;
-    var paramLines = Object.keys(query).map(function(key) {
+    var bodyData = {
+      uuid: "1",
+      project_id: body.project_id,
+      user_id: body.user_id,
+      cookie_id: body.cookie_id,
+      visitor_id: (body.user_id || body.cookie_id),
+      name: body.event,
+      ip: (body.context.ip || body.serverIp),
+      referring_url: referring_url,
+      referring_host: url.parse(referring_url).host,
+      page_url: page_url,
+      page_path: url.parse(page_url).path,
+      revenue: parseInt(body.properties.revenue) * 100,
+      timestamp: timestamp
+    };
+
+    var eventRow = [
+      'events',
+      JSON.stringify(bodyData)
+    ].join("\t");
+
+    var query = url.parse(properties.url, true).query;
+    var paramRows = Object.keys(query).map(function(key) {
+      var paramData = {
+        uuid: bodyData.uuid,
+        project_id: body.project_id,
+        key: key,
+        value: query[key],
+        timestamp: timestamp
+      };
       return [
-        "1",
-        body.project_id,
-        key,
-        query[key],
-        moment(body.timestamp).format("YYYY-MM-DD HH:MM:SS")
+        'params',
+        JSON.stringify(paramData)
       ].join("\t");
     }).join("\n");
+
+    var rows = [ eventRow, paramRows ].join("\n");
 
     var testContext = {
       succeed: function() {
         sinon.assert.calledWith(firehoseSpy, {
-          DeliveryStreamName: "events-sandbox",
-          Record: { Data: eventLine }
-        });
-
-        sinon.assert.calledWith(firehoseSpy, {
-          DeliveryStreamName: "params-sandbox",
-          Record: { Data: paramLines }
+          DeliveryStreamName: "tracking-2-development",
+          Record: { Data: rows }
         });
         done();
       },
@@ -91,6 +102,7 @@ describe('track event', function(){
 describe('identify event', function(){
   it('calls firehose with the data', function(done){
     var serverTime = (new Date()).toISOString();
+    var uuid = "1";
 
     // Some data
     var body = {
@@ -104,7 +116,7 @@ describe('identify event', function(){
     };
 
     var line = JSON.stringify({
-      uuid: "1",
+      uuid: uuid,
       type: "identify",
       body: JSON.stringify(body),
       timestamp: (new Date()).toISOString()
@@ -114,39 +126,51 @@ describe('identify event', function(){
     var firehoseSpy = sinon.spy();
     stubFirehoseWithSpy(firehoseSpy);
 
-    var identifyLine = [
-      "1",
-      body.project_id,
-      body.user_id,
-      body.cookie_id,
-      (body.user_id || body.cookie_id),
-      moment(serverTime).format("YYYY-MM-DD HH:MM:SS")
+    var timestamp = moment(body.serverTime).format("YYYY-MM-DD HH:MM:SS");
+    var visitor_id = body.user_id || body.cookie_id;
+
+    var bodyData = {
+      uuid: uuid,
+      project_id: body.project_id,
+      user_id: body.user_id,
+      cookie_id: body.cookie_id,
+      visitor_id: visitor_id,
+      timestamp: timestamp
+    }
+
+    var identifyRow = [
+      'identifies',
+      JSON.stringify(bodyData)
     ].join("\t") + "\n";
 
-    var traitLines = Object.keys(body.traits).map(function(key) {
+    var traitRows = Object.keys(body.traits).map(function(key) {
       var value = body.traits[key];
 
+      var traitData = {
+        uuid: uuid,
+        project_id: body.project_id,
+        user_id: body.user_id,
+        cookie_id: body.cookie_id,
+        visitor_id: visitor_id,
+        key: key,
+        value: value,
+        timestamp: timestamp
+      }
+
       return [
-        "1",
-        body.project_id,
-        body.user_id,
-        body.cookie_id,
-        (body.user_id || body.cookie_id),
-        key,
-        value,
-        moment(body.timestamp).format("YYYY-MM-DD HH:MM:SS")
+        'traits',
+        JSON.stringify(traitData)
       ].join("\t");
+
     }).join("\n");
+
+    var rows = [ identifyRow, traitRows ].join("\n");
 
     var testContext = {
       succeed: function() {
         sinon.assert.calledWith(firehoseSpy, {
-          DeliveryStreamName: "identifies-sandbox",
-          Record: { Data: identifyLine }
-        });
-        sinon.assert.calledWith(firehoseSpy, {
-          DeliveryStreamName: "traits-sandbox",
-          Record: { Data: traitLines }
+          DeliveryStreamName: "tracking-2-development",
+          Record: { Data: rows }
         });
         done();
       },
@@ -160,6 +184,7 @@ describe('identify event', function(){
 describe('alias event', function(){
   it('calls firehose with the data', function(done){
     var serverTime = (new Date()).toISOString();
+    var uuid = "1";
 
     // Some data
     var body = {
@@ -169,7 +194,7 @@ describe('alias event', function(){
     };
 
     var line = JSON.stringify({
-      uuid: "1",
+      uuid: uuid,
       type: "alias",
       body: JSON.stringify(body),
       timestamp: (new Date()).toISOString()
@@ -179,20 +204,28 @@ describe('alias event', function(){
     var firehoseSpy = sinon.spy();
     stubFirehoseWithSpy(firehoseSpy);
 
-    var eventLine = [
-      "1",
-      body.project_id,
-      body.user_id,
-      body.cookie_id,
-      (body.user_id || body.cookie_id),
-      moment(serverTime).format("YYYY-MM-DD HH:MM:SS")
+    var timestamp = moment(body.serverTime).format("YYYY-MM-DD HH:MM:SS");
+    var visitor_id = body.user_id || body.cookie_id;
+
+    var bodyData = {
+      uuid: uuid,
+      project_id: body.project_id,
+      user_id: body.user_id,
+      cookie_id: body.cookie_id,
+      visitor_id: visitor_id,
+      timestamp: timestamp
+    };
+
+    var row = [
+      'aliases',
+      JSON.stringify(bodyData)
     ].join("\t") + "\n";
 
     var testContext = {
       succeed: function() {
         sinon.assert.calledWith(firehoseSpy, {
-          DeliveryStreamName: "alias-sandbox",
-          Record: { Data: eventLine }
+          DeliveryStreamName: "tracking-2-development",
+          Record: { Data: row }
         });
         done();
       },
@@ -202,7 +235,6 @@ describe('alias event', function(){
     lambda.handler(testEvent(), testContext);
   })
 })
-
 
 function stubS3(data) {
   // The fake stream
