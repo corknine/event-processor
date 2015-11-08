@@ -63,6 +63,7 @@ exports.handler = function(s3Event, context) {
       console.log(event);
       console.log(err, err.stack.split("\n"));
     }
+    if(!rows) return;
     firehosePut(rows);
   }
 
