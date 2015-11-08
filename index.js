@@ -56,7 +56,13 @@ exports.handler = function(s3Event, context) {
    * @param {Object} event
    */
   function handleEvent(event) {
-    var rows = parsers[event.type].call(event);
+    try {
+      var rows = parsers[event.type].call(event);
+    }
+    catch (err) {
+      console.log(event);
+      console.log(err, err.stack.split("\n"));
+    }
     firehosePut(rows);
   }
 
