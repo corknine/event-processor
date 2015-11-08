@@ -3,6 +3,10 @@ var expect = require("chai").expect;
 var revenue = require('../../lib/revenue');
 
 describe('Revenue', function(){
+  it('handles non string', function(){
+    expect(revenue.parse(33.99)).to.eql(3399);
+  });
+
   it('parses an int', function(){
     expect(revenue.parse("1")).to.eql(100);
   });
