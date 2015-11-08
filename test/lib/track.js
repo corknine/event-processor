@@ -67,6 +67,20 @@ describe('parseParams', function(){
     expect(secondParam.value).to.eql("mayurasaöna");
   });
 
+  it('handles arrays', function() {
+    var url = "http://sam.AintShit?utm%20source=facebook%20please&Mayurasa%C3%96na=Mayurasa%C3%96na&utm%20source=bing";
+    var time = moment();
+    var event = {
+      timestamp: time.toISOString(),
+      properties: { url: url }
+    };
+
+    var firstParam = parsed(event)[0];
+    expect(firstParam.timestamp).to.eql(time.format("YYYY-MM-DD HH:MM:SS"));
+    expect(firstParam.key).to.eql("utm source");
+    expect(firstParam.value).to.eql("facebook please");
+  });
+
   it('does not parse a null value param', function(){
     var event = {
       properties: {

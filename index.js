@@ -17,7 +17,7 @@ exports.handler = function(s3Event, context) {
   var key = s3Event.Records[0].s3.object.key;
   var wg = new WaitGroup;
 
-  console.log('Received S3 event, downloading file...');
+  console.log('Received S3 event, downloading file: ' + key);
 
   /**
    * Event Extraction Pipeline
