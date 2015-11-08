@@ -66,8 +66,7 @@ exports.handler = function(s3Event, context) {
       DeliveryStreamName: 'tracking-2-development',
       Record: { Data: data }
     }, function(err, data) {
-      // TODO: do something better if there's an error
-      if (err) console.log(err, err.stack);
+      if (err) handleError(err);
       wg.done();
     });
   }
@@ -91,8 +90,8 @@ exports.handler = function(s3Event, context) {
     return data;
   }
 
-  // handle stream errors (just bail, for now :p)
   function handleError(err) {
+    console.log('ErrorBatch:', key);
     console.log('Error:', err);
     console.log('Exiting...');
     context.fail(err);

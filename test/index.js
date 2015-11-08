@@ -45,9 +45,10 @@ describe('track event', function(){
     var properties = body.properties;
     var referring_url = body.properties.referrer;
     var page_url = body.properties.url;
+    var uuid = "1";
 
     var bodyData = {
-      uuid: "1",
+      uuid: uuid,
       project_id: body.project_id,
       user_id: body.user_id,
       cookie_id: body.cookie_id,
@@ -63,26 +64,28 @@ describe('track event', function(){
     };
 
     var eventRow = [
-      'events',
+      'event',
+      uuid,
       JSON.stringify(bodyData)
     ].join("\t");
 
     var query = url.parse(properties.url, true).query;
     var paramRows = Object.keys(query).map(function(key) {
       var paramData = {
-        uuid: bodyData.uuid,
+        uuid: uuid,
         project_id: body.project_id,
         key: key,
         value: query[key],
         timestamp: timestamp
       };
       return [
-        'params',
+        'param',
+        uuid,
         JSON.stringify(paramData)
       ].join("\t");
     }).join("\n");
 
-    var rows = [ eventRow, paramRows ].join("\n");
+    var rows = [ eventRow, paramRows ].join("\n") + "\n";
 
     var testContext = {
       succeed: function() {
@@ -139,7 +142,8 @@ describe('identify event', function(){
     }
 
     var identifyRow = [
-      'identifies',
+      'identify',
+      uuid,
       JSON.stringify(bodyData)
     ].join("\t") + "\n";
 
@@ -158,7 +162,8 @@ describe('identify event', function(){
       }
 
       return [
-        'traits',
+        'trait',
+        uuid,
         JSON.stringify(traitData)
       ].join("\t");
 
@@ -217,7 +222,8 @@ describe('alias event', function(){
     };
 
     var row = [
-      'aliases',
+      'alias',
+      uuid,
       JSON.stringify(bodyData)
     ].join("\t") + "\n";
 
