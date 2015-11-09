@@ -64,6 +64,7 @@ exports.handler = function(s3Event, context) {
       console.log(err, err.stack.split("\n"));
     }
     if(!rows) return;
+
     firehosePut(rows);
   }
 
@@ -94,6 +95,8 @@ exports.handler = function(s3Event, context) {
     data.type = parsed.type;
     data.serverTime = parsed.timestamp;
     data.serverIp = parsed.ip;
+    data.project_id = parsed.project_id;
+    data.key = key;
     return data;
   }
 

@@ -8,13 +8,14 @@ var sinon = require('sinon');
 
 var lambda = rewire('../index');
 
+var bucketKey = 'fake-bucket-key';
+
 describe('track event', function(){
   it('calls firehose with the data', function(done){
     var firehoseSpy = sinon.spy();
 
     // Some data
     var body = {
-      project_id: 2,
       event: "Viewed a Page",
       context: {
         userAgent: 'Mac OS X',
@@ -35,13 +36,14 @@ describe('track event', function(){
       type: "track",
       body: JSON.stringify(body),
       timestamp: (new Date()).toISOString(),
-      ip: "10.0.0.1"
+      ip: "10.0.0.1",
+      project_id: 2
     }) + "\n"
 
     stubS3(line)
     stubFirehoseWithSpy(firehoseSpy);
 
-    var timestamp = moment(body.timestamp || body.serverTime).format("YYYY-MM-DD HH:MM:SS");
+    var timestamp = moment(body.timestamp || body.serverTime).format("YYYY-MM-DD HH:mm:ss");
     var properties = body.properties;
     var referring_url = body.properties.referrer;
     var page_url = body.properties.url;
@@ -49,7 +51,7 @@ describe('track event', function(){
 
     var bodyData = {
       uuid: uuid,
-      project_id: body.project_id,
+      project_id: 2,
       user_id: body.user_id,
       cookie_id: body.cookie_id,
       visitor_id: (body.user_id || body.cookie_id),
@@ -66,14 +68,15 @@ describe('track event', function(){
     var eventRow = [
       'event',
       uuid,
-      JSON.stringify(bodyData)
+      JSON.stringify(bodyData),
+      bucketKey
     ].join("\t");
 
     var query = url.parse(properties.url, true).query;
     var paramRows = Object.keys(query).map(function(key) {
       var paramData = {
         uuid: uuid,
-        project_id: body.project_id,
+        project_id: 2,
         key: key,
         value: query[key],
         timestamp: timestamp
@@ -81,7 +84,8 @@ describe('track event', function(){
       return [
         'param',
         uuid,
-        JSON.stringify(paramData)
+        JSON.stringify(paramData),
+        bucketKey
       ].join("\t");
     }).join("\n");
 
@@ -109,7 +113,6 @@ describe('identify event', function(){
 
     // Some data
     var body = {
-      project_id: 2,
       user_id: null,
       cookie_id: "12345",
       traits: {
@@ -122,19 +125,20 @@ describe('identify event', function(){
       uuid: uuid,
       type: "identify",
       body: JSON.stringify(body),
-      timestamp: (new Date()).toISOString()
+      timestamp: (new Date()).toISOString(),
+      project_id: 2
     }) + "\n"
     stubS3(line)
 
     var firehoseSpy = sinon.spy();
     stubFirehoseWithSpy(firehoseSpy);
 
-    var timestamp = moment(body.serverTime).format("YYYY-MM-DD HH:MM:SS");
+    var timestamp = moment(body.serverTime).format("YYYY-MM-DD HH:mm:ss");
     var visitor_id = body.user_id || body.cookie_id;
 
     var bodyData = {
       uuid: uuid,
-      project_id: body.project_id,
+      project_id: 2,
       user_id: body.user_id,
       cookie_id: body.cookie_id,
       visitor_id: visitor_id,
@@ -144,7 +148,8 @@ describe('identify event', function(){
     var identifyRow = [
       'identify',
       uuid,
-      JSON.stringify(bodyData)
+      JSON.stringify(bodyData),
+      bucketKey
     ].join("\t") + "\n";
 
     var traitRows = Object.keys(body.traits).map(function(key) {
@@ -152,7 +157,7 @@ describe('identify event', function(){
 
       var traitData = {
         uuid: uuid,
-        project_id: body.project_id,
+        project_id: 2,
         user_id: body.user_id,
         cookie_id: body.cookie_id,
         visitor_id: visitor_id,
@@ -164,7 +169,8 @@ describe('identify event', function(){
       return [
         'trait',
         uuid,
-        JSON.stringify(traitData)
+        JSON.stringify(traitData),
+        bucketKey
       ].join("\t");
 
     }).join("\n");
@@ -193,7 +199,6 @@ describe('alias event', function(){
 
     // Some data
     var body = {
-      project_id: 2,
       user_id: null,
       cookie_id: "12345"
     };
@@ -202,19 +207,20 @@ describe('alias event', function(){
       uuid: uuid,
       type: "alias",
       body: JSON.stringify(body),
-      timestamp: (new Date()).toISOString()
+      timestamp: (new Date()).toISOString(),
+      project_id: 2
     }) + "\n"
     stubS3(line)
 
     var firehoseSpy = sinon.spy();
     stubFirehoseWithSpy(firehoseSpy);
 
-    var timestamp = moment(body.serverTime).format("YYYY-MM-DD HH:MM:SS");
+    var timestamp = moment(body.serverTime).format("YYYY-MM-DD HH:mm:ss");
     var visitor_id = body.user_id || body.cookie_id;
 
     var bodyData = {
       uuid: uuid,
-      project_id: body.project_id,
+      project_id: 2,
       user_id: body.user_id,
       cookie_id: body.cookie_id,
       visitor_id: visitor_id,
@@ -224,7 +230,8 @@ describe('alias event', function(){
     var row = [
       'alias',
       uuid,
-      JSON.stringify(bodyData)
+      JSON.stringify(bodyData),
+      bucketKey
     ].join("\t") + "\n";
 
     var testContext = {
@@ -274,7 +281,7 @@ function testEvent() {
     Records: [{
       s3: {
         bucket: { name: 'fake-bucket-name' },
-        object: { key: 'fake-bucket-key' }
+        object: { key: bucketKey }
       }
     }]
   };

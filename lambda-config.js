@@ -5,7 +5,7 @@ module.exports = {
   Role: 'arn:aws:iam::348454833122:role/lambda_s3_exec_role',
   Region: 'us-east-1',
   Runtime: 'nodejs',
-  MemorySize: 128,
-  Timeout: 60,
+  MemorySize: 256,
+  Timeout: 300,
   Environment: 'production'
 }

@@ -12,13 +12,13 @@ describe('parseEvent', function(){
   it('uses the events timestamp', function(){
     var time = moment();
     var event = { timestamp: time.toISOString() };
-    expect(parsed(event).timestamp).to.eql(time.format("YYYY-MM-DD HH:MM:SS"));
+    expect(parsed(event).timestamp).to.eql(time.format("YYYY-MM-DD HH:mm:ss"));
   });
 
   it('uses the server timestamp if no event timestamp', function(){
     var time = moment();
     var event = { serverTime: time.toISOString() };
-    expect(parsed(event).timestamp).to.eql(time.format("YYYY-MM-DD HH:MM:SS"));
+    expect(parsed(event).timestamp).to.eql(time.format("YYYY-MM-DD HH:mm:ss"));
   });
 
   it('uses the context ip', function(){
@@ -42,6 +42,12 @@ describe('parseEvent', function(){
     var event = { properties: { URL: url } };
     expect(parsed(event).page_url).to.eql("http://nark.AintShit?Mayu rasaÖna=MayurasaÖna");
   });
+
+  it('handles malformed url', function() {
+    var url = "http://nark.AintShit.com/?pre=hello.Jeov%E1"
+    var event = { properties: { URL: url } };
+    expect(parsed(event).page_url).to.eql("http://nark.AintShit.com/?pre=hello.Jeová");
+  });
 });
 
 describe('parseParams', function(){
@@ -58,7 +64,7 @@ describe('parseParams', function(){
       }
     };
     var firstParam = parsed(event)[0];
-    expect(firstParam.timestamp).to.eql(time.format("YYYY-MM-DD HH:MM:SS"));
+    expect(firstParam.timestamp).to.eql(time.format("YYYY-MM-DD HH:mm:ss"));
     expect(firstParam.key).to.eql("utm source");
     expect(firstParam.value).to.eql("facebook please");
 
@@ -76,7 +82,7 @@ describe('parseParams', function(){
     };
 
     var firstParam = parsed(event)[0];
-    expect(firstParam.timestamp).to.eql(time.format("YYYY-MM-DD HH:MM:SS"));
+    expect(firstParam.timestamp).to.eql(time.format("YYYY-MM-DD HH:mm:ss"));
     expect(firstParam.key).to.eql("utm source");
     expect(firstParam.value).to.eql("facebook please");
   });
